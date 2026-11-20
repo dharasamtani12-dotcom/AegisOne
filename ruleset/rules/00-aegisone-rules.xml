@@ -1,0 +1,217 @@
+<!-- AegisOne Deterministic 0-16 Severity Ruleset (ruleset/rules/00-aegisone-rules.xml) -->
+<group name="aegisone,core,">
+  <!-- SSHD Rules -->
+  <rule id="5700" level="0">
+    <decoded_as>sshd</decoded_as>
+    <description>SSHD syslog event baseline.</description>
+    <group>syslog,sshd,</group>
+  </rule>
+
+  <rule id="5715" level="3">
+    <if_sid>5700</if_sid>
+    <match>Accepted password|Accepted publickey</match>
+    <description>SSHD authentication succeeded.</description>
+    <mitre>
+      <id>T1078</id>
+      <tactic>Valid Accounts</tactic>
+    </mitre>
+    <group>authentication_success,</group>
+  </rule>
+
+  <rule id="5710" level="5">
+    <if_sid>5700</if_sid>
+    <match>invalid user</match>
+    <description>Attempt to login using a non-existent user over SSH.</description>
+    <mitre>
+      <id>T1110.001</id>
+      <tactic>Credential Access</tactic>
+    </mitre>
+    <group>authentication_failed,invalid_login,</group>
+  </rule>
+
+  <rule id="5716" level="5">
+    <if_sid>5700</if_sid>
+    <match>Failed password</match>
+    <description>SSHD authentication failed.</description>
+    <mitre>
+      <id>T1110.001</id>
+      <tactic>Credential Access</tactic>
+    </mitre>
+    <group>authentication_failed,</group>
+  </rule>
+
+  <rule id="5712" level="10" frequency="4" timeframe="180">
+    <if_matched_sid>5710</if_matched_sid>
+    <same_source_ip />
+    <description>SSHD brute force trying to access system with non-existent users.</description>
+    <mitre>
+      <id>T1110.001</id>
+      <tactic>Credential Access</tactic>
+    </mitre>
+    <group>authentication_failures,brute_force,</group>
+  </rule>
+
+  <rule id="5720" level="10" frequency="5" timeframe="180">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_source_ip />
+    <description>Multiple SSHD authentication failures from same source IP.</description>
+    <mitre>
+      <id>T1110</id>
+      <tactic>Credential Access</tactic>
+    </mitre>
+    <group>authentication_failures,brute_force,</group>
+  </rule>
+
+  <!-- Privilege Escalation (SUDO) -->
+  <rule id="5401" level="4">
+    <decoded_as>sudo</decoded_as>
+    <description>Sudo command executed by local user.</description>
+    <mitre>
+      <id>T1548.003</id>
+      <tactic>Privilege Escalation</tactic>
+    </mitre>
+    <group>sudo,privilege_escalation,</group>
+  </rule>
+
+  <rule id="5402" level="12">
+    <if_sid>5401</if_sid>
+    <match>/bin/bash|/bin/sh|chmod +s|usermod|visudo|/etc/shadow</match>
+    <description>High-risk root shell or credential store sudo escalation executed.</description>
+    <mitre>
+      <id>T1548.003</id>
+      <tactic>Privilege Escalation</tactic>
+    </mitre>
+    <group>sudo,critical_escalation,</group>
+  </rule>
+
+  <!-- Windows Sysmon Rules -->
+  <rule id="61600" level="3">
+    <decoded_as>windows-sysmon</decoded_as>
+    <description>Windows Sysmon operational telemetry event.</description>
+    <group>windows,sysmon,</group>
+  </rule>
+
+  <rule id="61603" level="12">
+    <if_sid>61600</if_sid>
+    <match>powershell.exe|-EncodedCommand|-enc |IEX |DownloadString|certutil</match>
+    <description>Sysmon EventID 1: Suspicious encoded or download PowerShell execution.</description>
+    <mitre>
+      <id>T1059.001</id>
+      <tactic>Execution</tactic>
+    </mitre>
+    <group>sysmon,execution,powershell,</group>
+  </rule>
+
+  <rule id="61605" level="9">
+    <if_sid>61600</if_sid>
+    <match>EventID=3</match>
+    <description>Sysmon EventID 3: Unexpected outbound network connection initiated by endpoint binary.</description>
+    <mitre>
+      <id>T1071.001</id>
+      <tactic>Command and Control</tactic>
+    </mitre>
+    <group>sysmon,c2_channel,</group>
+  </rule>
+
+  <!-- Systemd-Journald Persistence -->
+  <rule id="40101" level="3">
+    <decoded_as>systemd-journald</decoded_as>
+    <description>Systemd journald unit operational record.</description>
+    <group>linux,journald,</group>
+  </rule>
+
+  <rule id="40112" level="11">
+    <if_sid>40101</if_sid>
+    <match>Created slice|Started .*backdoor|curl .*sh|nc -e|/tmp/</match>
+    <description>Systemd unit persistence or anomalous execution recorded in journald.</description>
+    <mitre>
+      <id>T1543.002</id>
+      <tactic>Persistence</tactic>
+    </mitre>
+    <group>linux,journald,persistence,</group>
+  </rule>
+
+  <!-- Docker Container Rules -->
+  <rule id="87901" level="4">
+    <decoded_as>docker-engine</decoded_as>
+    <description>Docker container lifecycle event recorded.</description>
+    <group>docker,container,</group>
+  </rule>
+
+  <rule id="87915" level="11">
+    <if_sid>87901</if_sid>
+    <match>action=exec_start|privileged|host_pid</match>
+    <description>Interactive exec or privileged container launch detected in Docker engine.</description>
+    <mitre>
+      <id>T1610</id>
+      <tactic>Execution</tactic>
+    </mitre>
+    <group>docker,container_escape,</group>
+  </rule>
+
+  <!-- File Integrity Monitoring (FIM) -->
+  <rule id="550" level="7">
+    <decoded_as>aegisone-fim</decoded_as>
+    <match>action=modified</match>
+    <description>File integrity checksum modified on monitored path.</description>
+    <mitre>
+      <id>T1565.001</id>
+      <tactic>Impact</tactic>
+    </mitre>
+    <group>syscheck,fim,</group>
+  </rule>
+
+  <rule id="554" level="13">
+    <if_sid>550</if_sid>
+    <match>/etc/passwd|/etc/shadow|authorized_keys|/etc/sudoers</match>
+    <description>Critical authentication or privilege file modified unexpectedly.</description>
+    <mitre>
+      <id>T1098.004</id>
+      <tactic>Persistence</tactic>
+    </mitre>
+    <group>syscheck,fim,critical_file,</group>
+  </rule>
+
+  <!-- Web Application Probes -->
+  <rule id="31100" level="2">
+    <decoded_as>web-access</decoded_as>
+    <description>HTTP web access log entry.</description>
+    <group>web,accesslog,</group>
+  </rule>
+
+  <rule id="31104" level="11">
+    <if_sid>31100</if_sid>
+    <match>UNION SELECT|../..|etc/passwd|&lt;script&gt;|xp_cmdshell</match>
+    <description>Web application SQL injection or path traversal exploitation attempt.</description>
+    <mitre>
+      <id>T1190</id>
+      <tactic>Initial Access</tactic>
+    </mitre>
+    <group>web,attack,sqli,</group>
+  </rule>
+
+  <!-- CRON & MemFree Telemetry -->
+  <rule id="2830" level="3">
+    <decoded_as>cron-daemon</decoded_as>
+    <description>CRON scheduled job executed.</description>
+    <group>cron,</group>
+  </rule>
+
+  <rule id="2835" level="9">
+    <decoded_as>aegisone-command</decoded_as>
+    <match>status=CRITICAL</match>
+    <description>Periodic command check reported critical resource exhaustion (MemFree).</description>
+    <mitre>
+      <id>T1499</id>
+      <tactic>Impact</tactic>
+    </mitre>
+    <group>system_health,memfree,</group>
+  </rule>
+
+  <!-- Dynamic Sibling Session Rules -->
+  <rule id="90100" level="4">
+    <decoded_as>aegis-session</decoded_as>
+    <description>Dynamic session telemetry parsed via sibling decoders.</description>
+    <group>session,</group>
+  </rule>
+</group>

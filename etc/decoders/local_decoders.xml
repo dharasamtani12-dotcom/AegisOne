@@ -1,0 +1,10 @@
+<!-- AegisOne Upgrade-Safe Local Custom Decoders (etc/decoders/local_decoders.xml) -->
+<decoders>
+  <!-- Add local overrides or custom application parsers here -->
+  <decoder name="campus-vpn-gateway">
+    <program_name>^campus-vpn$</program_name>
+    <prematch>tunnel=</prematch>
+    <regex type="pcre2">user=(\S+)\s+srcip=(\d+\.\d+\.\d+\.\d+)\s+tunnel=(\S+)\s+status=(\S+)</regex>
+    <order>srcuser,srcip,protocol,status</order>
+  </decoder>
+</decoders>

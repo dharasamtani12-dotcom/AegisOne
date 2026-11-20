@@ -1,0 +1,13 @@
+<!-- AegisOne Upgrade-Safe Local Custom Rules (etc/rules/local_rules.xml) -->
+<group name="local,aegisone,">
+  <rule id="100010" level="8">
+    <decoded_as>campus-vpn-gateway</decoded_as>
+    <match>status=DENIED</match>
+    <description>Campus VPN authentication denied from external IP.</description>
+    <mitre>
+      <id>T1133</id>
+      <tactic>Initial Access</tactic>
+    </mitre>
+    <group>vpn,authentication_failed,</group>
+  </rule>
+</group>

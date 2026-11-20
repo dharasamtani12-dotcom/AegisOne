@@ -1,0 +1,6 @@
+{
+  "name": "AegisOne",
+  "description": "AI-assisted cybersecurity monitoring, SIEM, and XDR platform with two-phase decoding, 0-16 severity rules, Isolation Forest anomaly detection, AQL threat hunting, and evidence-grounded AI incident investigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

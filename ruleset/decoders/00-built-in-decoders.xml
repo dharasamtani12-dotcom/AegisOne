@@ -1,0 +1,144 @@
+<!-- AegisOne Built-In Two-Phase XML Decoders (ruleset/decoders/00-built-in-decoders.xml) -->
+<decoders>
+  <!-- SSHD Parent & Children -->
+  <decoder name="sshd">
+    <program_name>^sshd$</program_name>
+  </decoder>
+
+  <decoder name="sshd-success">
+    <parent>sshd</parent>
+    <prematch>^Accepted </prematch>
+    <regex type="pcre2">^Accepted\s+(\S+)\s+for\s+(?:invalid user\s+)?(\S+)\s+from\s+(\d+\.\d+\.\d+\.\d+)\s+port\s+(\d+)</regex>
+    <order>action,srcuser,srcip,srcport</order>
+  </decoder>
+
+  <decoder name="sshd-invalid-user">
+    <parent>sshd</parent>
+    <prematch>^Failed\s+\S+\s+for\s+invalid\s+user</prematch>
+    <regex type="pcre2">^Failed\s+(\S+)\s+for\s+invalid\s+user\s+(\S+)\s+from\s+(\d+\.\d+\.\d+\.\d+)\s+port\s+(\d+)</regex>
+    <order>action,srcuser,srcip,srcport</order>
+  </decoder>
+
+  <decoder name="sshd-failed">
+    <parent>sshd</parent>
+    <prematch>^Failed\s+</prematch>
+    <regex type="pcre2">^Failed\s+(\S+)\s+for\s+(\S+)\s+from\s+(\d+\.\d+\.\d+\.\d+)\s+port\s+(\d+)</regex>
+    <order>action,srcuser,srcip,srcport</order>
+  </decoder>
+
+  <decoder name="sshd-disconnect">
+    <parent>sshd</parent>
+    <prematch>^(?:Disconnected|Connection closed) </prematch>
+    <regex type="pcre2">by\s+(?:authenticating\s+user\s+)?(\S+)\s+(\d+\.\d+\.\d+\.\d+)\s+port\s+(\d+)</regex>
+    <order>srcuser,srcip,srcport</order>
+  </decoder>
+
+  <!-- SUDO Privilege Escalation Decoder -->
+  <decoder name="sudo">
+    <program_name>^sudo$</program_name>
+    <prematch>USER=</prematch>
+    <regex type="pcre2">^\s*(\S+)\s*:\s*TTY=(\S+)\s*;\s*PWD=(\S+)\s*;\s*USER=(\S+)\s*;\s*COMMAND=(.+)$</regex>
+    <order>srcuser,extra_data,url,user,data</order>
+  </decoder>
+
+  <!-- Systemd-Journald Structured Decoder -->
+  <decoder name="systemd-journald">
+    <program_name>^systemd-journald$</program_name>
+    <prematch>^_HOSTNAME=|SYSLOG_IDENTIFIER=</prematch>
+    <regex type="pcre2">_SYSTEMD_UNIT=(\S+)</regex>
+    <order>system_name</order>
+  </decoder>
+
+  <decoder name="systemd-journald-pid" use_own_name="true">
+    <parent>systemd-journald</parent>
+    <prematch offset="after_parent">_PID=|SYSLOG_PID=</prematch>
+    <regex type="pcre2">(?:SYSLOG_PID|_PID)=(\d+).*?MESSAGE=(.+)$</regex>
+    <order>id,extra_data</order>
+  </decoder>
+
+  <!-- Windows Sysmon Eventchannel Decoder -->
+  <decoder name="windows-sysmon">
+    <program_name>^Microsoft-Windows-Sysmon/Operational$</program_name>
+    <prematch>EventID=</prematch>
+    <regex type="pcre2">EventID=(\d+)</regex>
+    <order>id</order>
+  </decoder>
+
+  <decoder name="sysmon-process-create" use_own_name="true">
+    <parent>windows-sysmon</parent>
+    <prematch>EventID=1\b</prematch>
+    <regex type="pcre2">User=([^\s;]+).*?Image=([^\s;]+).*?CommandLine="([^"]+)"</regex>
+    <order>user,url,extra_data</order>
+  </decoder>
+
+  <decoder name="sysmon-network-connect" use_own_name="true">
+    <parent>windows-sysmon</parent>
+    <prematch>EventID=3\b</prematch>
+    <regex type="pcre2">User=([^\s;]+).*?SourceIp=(\S+).*?DestinationIp=(\S+).*?DestinationPort=(\d+)</regex>
+    <order>user,srcip,dstip,dstport</order>
+  </decoder>
+
+  <!-- Docker Container Events -->
+  <decoder name="docker-engine">
+    <program_name>^dockerd$</program_name>
+    <prematch>container</prematch>
+    <regex type="pcre2">action=(\S+)\s+container=(\S+)\s+image=(\S+)(?:\s+user=(\S+))?</regex>
+    <order>action,system_name,url,srcuser</order>
+  </decoder>
+
+  <!-- CRON & Periodic Command Checks (MemFree) -->
+  <decoder name="cron-daemon">
+    <program_name>^CRON$</program_name>
+    <regex type="pcre2">\((\S+)\)\s+CMD\s+\((.+)\)</regex>
+    <order>user,extra_data</order>
+  </decoder>
+
+  <decoder name="aegisone-command">
+    <program_name>^aegisone-command$</program_name>
+    <regex type="pcre2">metric=(\S+)\s+value=(\d+)(\S*)\s+status=(\S+)</regex>
+    <order>id,data,extra_data,status</order>
+  </decoder>
+
+  <!-- File Integrity Monitoring (FIM) -->
+  <decoder name="aegisone-fim">
+    <program_name>^aegisone-fim$</program_name>
+    <regex type="pcre2">action=(\S+)\s+path=(\S+)\s+uid=(\S+)\s+sha256_before=(\S+)\s+sha256_after=(\S+)</regex>
+    <order>action,url,user,data,extra_data</order>
+  </decoder>
+
+  <!-- Web Access / HTTP Intrusion Decoder -->
+  <decoder name="web-access">
+    <program_name>^nginx$|^apache2$</program_name>
+    <regex type="pcre2">^(\d+\.\d+\.\d+\.\d+)\s+\S+\s+(\S+)\s+"(\S+)\s+(\S+)\s+[^"]+"\s+(\d{3})\s+(\d+)</regex>
+    <order>srcip,srcuser,action,url,status,data</order>
+  </decoder>
+
+  <!-- Dynamic Sibling Decoders (Order-Independent Key=Value Extraction) -->
+  <decoder name="aegis-session">
+    <program_name>^aegis-session$</program_name>
+  </decoder>
+
+  <decoder name="aegis-session-srcuser">
+    <parent>aegis-session</parent>
+    <regex type="pcre2">srcuser="([^"]+)"</regex>
+    <order>srcuser</order>
+  </decoder>
+
+  <decoder name="aegis-session-action">
+    <parent>aegis-session</parent>
+    <regex type="pcre2">action="([^"]+)"</regex>
+    <order>action</order>
+  </decoder>
+
+  <decoder name="aegis-session-dstuser">
+    <parent>aegis-session</parent>
+    <regex type="pcre2">dstuser="([^"]+)"</regex>
+    <order>user</order>
+  </decoder>
+
+  <decoder name="aegis-session-srcip">
+    <parent>aegis-session</parent>
+    <regex type="pcre2">srcip="([^"]+)"</regex>
+    <order>srcip</order>
+  </decoder>
+</decoders>
